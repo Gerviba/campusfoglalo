@@ -10,6 +10,11 @@
     <link href="../static/css/style.css" th:href="@{/css/style.css}" rel="stylesheet">
     <script>
 
+        const colors_fg = ["#666666", "#24602D", "#2E6061", "#513145", "#654322"];
+        const colors_bg = ["#000000", "#21AD32", "#3AAEB0", "#943F70", "#BF6818"];
+
+        let teamNames = {};
+
         function connect() {
             const socket = new SockJS('/ws');
             stompClient = Stomp.over(socket);
@@ -17,16 +22,168 @@
 
                 stompClient.subscribe('/topic/question', function (data) {
                     let question = JSON.parse(data.body);
+
+                    if (question.visible) {
+                        if (question.question.selection) {
+                            document.getElementById("question-sel-text").innerText = question.question.question;
+
+                            document.getElementById("answer-a").innerText = question.question.answers[0];
+                            document.getElementById("answer-a-box").classList.remove("answered");
+                            document.getElementById("answer-a-user").innerText = "";
+                            document.getElementById("answer-b").innerText = question.question.answers[1];
+                            document.getElementById("answer-b-box").classList.remove("answered");
+                            document.getElementById("answer-b-user").innerText = "";
+                            document.getElementById("answer-c").innerText = question.question.answers[2];
+                            document.getElementById("answer-c-box").classList.remove("answered");
+                            document.getElementById("answer-c-user").innerText = "";
+                            document.getElementById("answer-d").innerText = question.question.answers[3];
+                            document.getElementById("answer-d-box").classList.remove("answered");
+                            document.getElementById("answer-d-user").innerText = "";
+
+                            document.getElementById("sel-q").style.opacity = 1;
+                            document.getElementById("num-q").style.opacity = 0;
+                        } else {
+                            document.getElementById("question-num-text").innerText = question.question.question;
+                            document.getElementById("question-num-answer").innerText = "";
+
+                            document.getElementById("answer-num-a").innerText = "";
+                            document.getElementById("answer-a-num-box").classList.remove("answered");
+                            document.getElementById("answer-num-b").innerText = "";
+                            document.getElementById("answer-b-num-box").classList.remove("answered");
+                            document.getElementById("answer-num-c").innerText = "";
+                            document.getElementById("answer-c-num-box").classList.remove("answered");
+                            document.getElementById("answer-num-d").innerText = "";
+                            document.getElementById("answer-d-num-box").classList.remove("answered");
+
+                            document.getElementById("sel-q").style.opacity = 0;
+                            document.getElementById("num-q").style.opacity = 1;
+                        }
+
+                    } else {
+                        document.getElementById("sel-q").style.opacity = 0;
+                        document.getElementById("num-q").style.opacity = 0;
+                    }
+
                     console.log(question)
                 });
 
                 stompClient.subscribe('/topic/answer', function (data) {
-                    let answer = JSON.parse(data.body);
-                    console.log(answer)
+                    let question = JSON.parse(data.body);
+
+                    if (question.question.selection) {
+                        document.getElementById("question-sel-text").innerText = question.question.question;
+
+                        document.getElementById("answer-a").innerText = question.question.answers[0];
+                        document.getElementById("answer-a-box").classList.remove("answered");
+                        document.getElementById("answer-a-user").innerText = "";
+                        document.getElementById("answer-b").innerText = question.question.answers[1];
+                        document.getElementById("answer-b-box").classList.remove("answered");
+                        document.getElementById("answer-b-user").innerText = "";
+                        document.getElementById("answer-c").innerText = question.question.answers[2];
+                        document.getElementById("answer-c-box").classList.remove("answered");
+                        document.getElementById("answer-c-user").innerText = "";
+                        document.getElementById("answer-d").innerText = question.question.answers[3];
+                        document.getElementById("answer-d-box").classList.remove("answered");
+                        document.getElementById("answer-d-user").innerText = "";
+
+                        if (question.question.trueAnswer === 1)
+                            document.getElementById("answer-a-box").classList.add("answered");
+                        else if (question.question.trueAnswer === 2)
+                            document.getElementById("answer-b-box").classList.add("answered");
+                        else if (question.question.trueAnswer === 3)
+                            document.getElementById("answer-c-box").classList.add("answered");
+                        else if (question.question.trueAnswer === 4)
+                            document.getElementById("answer-d-box").classList.add("answered");
+
+                        let fields = [
+                            document.getElementById("answer-a-user"),
+                            document.getElementById("answer-b-user"),
+                            document.getElementById("answer-c-user"),
+                            document.getElementById("answer-d-user")
+                        ];
+
+                        for (const [key, value] of Object.entries(question.answers)) {
+                            fields[value - 1].innerText += (" " + teamNames[key] + " ");
+                        }
+
+                        document.getElementById("sel-q").style.opacity = 1;
+                        document.getElementById("num-q").style.opacity = 0;
+                    } else {
+                        document.getElementById("question-num-text").innerText = question.question.question;
+                        document.getElementById("question-num-answer").innerText = question.question.trueAnswer;
+
+                        document.getElementById("answer-num-a").innerText = "";
+                        document.getElementById("answer-a-num-box").classList.remove("answered");
+                        document.getElementById("answer-num-b").innerText = "";
+                        document.getElementById("answer-b-num-box").classList.remove("answered");
+                        document.getElementById("answer-num-c").innerText = "";
+                        document.getElementById("answer-c-num-box").classList.remove("answered");
+                        document.getElementById("answer-num-d").innerText = "";
+                        document.getElementById("answer-d-num-box").classList.remove("answered");
+
+                        let fields = [
+                            document.getElementById("answer-num-a"),
+                            document.getElementById("answer-num-b"),
+                            document.getElementById("answer-num-c"),
+                            document.getElementById("answer-num-d")
+                        ];
+
+                        for (const [key, value] of Object.entries(question.answers)) {
+                            fields[key - 1].innerText = teamNames[key] + ": " + value;
+                        }
+
+                        document.getElementById("sel-q").style.opacity = 0;
+                        document.getElementById("num-q").style.opacity = 1;
+                    }
+
+                    console.log(question);
                 });
 
                 stompClient.subscribe('/topic/status', function (data) {
                     let status = JSON.parse(data.body);
+
+                    if (status.users[1]) {
+                        document.getElementById("a-name").innerText = status.users[1].name;
+                        document.getElementById("a-score").innerText = status.users[1].score;
+                        document.getElementById("team-a").style.opacity = 1;
+                        teamNames[1] = status.users[1].name;
+                    }
+
+                    if (status.users[2]) {
+                        document.getElementById("b-name").innerText = status.users[2].name;
+                        document.getElementById("b-score").innerText = status.users[2].score;
+                        document.getElementById("team-b").style.opacity = 1;
+                        teamNames[2] = status.users[2].name;
+                    }
+
+                    if (status.users[3]) {
+                        document.getElementById("c-name").innerText = status.users[3].name;
+                        document.getElementById("c-score").innerText = status.users[3].score;
+                        document.getElementById("team-c").style.opacity = 1;
+                        teamNames[3] = status.users[3].name;
+                    }
+
+                    if (status.users[4]) {
+                        document.getElementById("d-name").innerText = status.users[4].name;
+                        document.getElementById("d-score").innerText = status.users[4].score;
+                        document.getElementById("team-d").style.opacity = 1;
+                        teamNames[4] = status.users[4].name;
+                    }
+
+                    for (const [key, value] of Object.entries(status.places)) {
+                        document.getElementById(key).style.fill = colors_fg[value.owner];
+                        document.getElementById(key).style.stroke = colors_bg[value.owner];
+                        if (value.tower)
+                            document.getElementById(key).style.fill = colors_bg[value.owner];
+                    }
+
+                    if (status.activeTeam) {
+                        document.getElementById("next-team").innerText = status.activeTeam.name;
+                        document.getElementById("next-team").style.opacity = 1;
+                    } else {
+                        document.getElementById("next-team").style.opacity = 0;
+                    }
+
                     console.log(status)
                 });
             });
@@ -39,55 +196,223 @@
 
 <div class="screen">
 
+    <div class="question" id="sel-q" style="opacity: 0">
+        <h2 id="question-sel-text">QUESTION TEXT</h2>
+        <div id="answer-a-box" class="answer"><p id="answer-a">A</p> <span id="answer-a-user"></span></div>
+        <div id="answer-b-box" class="answer"><p id="answer-b">B</p> <span id="answer-b-user"></span></div>
+        <div id="answer-c-box" class="answer"><p id="answer-c">C</p> <span id="answer-c-user"></span></div>
+        <div id="answer-d-box" class="answer"><p id="answer-d">D</p> <span id="answer-d-user"></span></div>
+    </div>
+
+    <div class="question" id="num-q" style="opacity: 0">
+        <h2 id="question-num-text">QUESTION TEXT</h2>
+        <h3 id="question-num-answer">1920</h3>
+        <div class="answer-num" id="answer-a-num-box"><p id="answer-num-a"></p></div>
+        <div class="answer-num" id="answer-b-num-box"><p id="answer-num-b"></p></div>
+        <div class="answer-num" id="answer-c-num-box"><p id="answer-num-c"></p></div>
+        <div class="answer-num" id="answer-d-num-box"><p id="answer-num-d"></p></div>
+    </div>
+
     <h1>Campus Foglaló</h1>
 
     <div class="teams">
-        <div class="team">
+        <div id="team-a" class="team color-a" style="opacity: 0">
             <div id="a-name" class="team-name">Alpha csapat</div>
             <ins id="a-score">0</ins>
-        </div>
-        <div class="team">
+        </div><br>
+        <div id="team-b"  class="team color-b" style="opacity: 0">
             <div id="b-name"  class="team-name">Beta csapat</div>
             <ins id="b-score">0</ins>
-        </div>
-        <div class="team">
+        </div><br>
+        <div id="team-c"  class="team color-c" style="opacity: 0">
             <div id="c-name"  class="team-name">Gamma csapat</div>
             <ins id="c-score">0</ins>
-        </div>
-        <div class="team">
+        </div><br>
+        <div id="team-d"  class="team color-d" style="opacity: 0">
             <div id="d-name" class="team-name">Delta csapat</div>
             <ins id="d-score">0</ins>
         </div>
     </div>
 
-    <div class="map"></div>
+    <div class="map">
+        <svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="8.26772in" height="11.6929in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+             viewBox="0 0 8268 11693"
+             xmlns:xlink="http://www.w3.org/1999/xlink">
+         <defs>
+          <font id="FontID0" horiz-adv-x="666" font-variant="normal" style="fill-rule:nonzero" font-style="normal" font-weight="400">
+            <font-face
+                    font-family="Arial">
+                <font-face-src>
+                    <font-face-name name="Arial"/>
+                </font-face-src>
+            </font-face>
+              <missing-glyph><path d="M0 0z"/></missing-glyph>
+              <glyph unicode="U" horiz-adv-x="722" d="M545.996 716.001l95.0087 0 0 -413.504c0,-72.0003 -8.17416,-129.166 -24.3425,-171.498 -16.3271,-42.1626 -45.6567,-76.6698 -87.9992,-103.162 -42.4908,-26.5025 -97.9946,-39.8331 -166.998,-39.8331 -66.8333,0 -121.659,11.4989 -164.161,34.666 -42.6708,23.1672 -73.0062,56.4991 -91.1651,100.335 -18.1695,43.8249 -27.339,103.659 -27.339,179.493l0 413.504 94.9981 0 0 -413.335c0,-62.1638 5.83415,-108.17 17.333,-137.499 11.4989,-29.499 31.1719,-52.3379 59.3367,-68.1674 27.9954,-15.9989 62.3332,-24.0036 102.833,-24.0036 69.3321,0 118.832,15.8401 148.331,47.3402 29.499,31.659 44.1637,92.3298 44.1637,182.33l0 413.335z"/>
+              <glyph unicode="D" horiz-adv-x="722" d="M76.998 0l0 716.001 246.665 0c55.6732,0 98.1746,-3.33531 127.504,-10.1648 40.9978,-9.49769 76.0027,-26.6719 105.004,-51.332 37.8319,-32.0084 65.9968,-72.6674 84.6639,-122.337 18.8366,-49.6696 28.1648,-106.497 28.1648,-170.334 0,-54.3285 -6.33179,-102.505 -18.9954,-144.498 -12.6742,-42.0037 -29.0013,-76.8392 -48.8332,-104.337 -20.0013,-27.4978 -41.6755,-49.1614 -65.3403,-64.8321 -23.4954,-15.8295 -51.9991,-27.8366 -85.331,-36.0002 -33.5013,-8.16357 -71.8309,-12.1659 -115.169,-12.1659l-258.333 0zm94.9981 83.9969l152.672 0c47.1602,0 84.1663,4.3412 110.997,13.1718 26.8307,8.83063 48.1661,21.166 64.165,37.1649 22.3413,22.5001 39.8331,52.8355 52.3379,90.8369 12.4942,38.0014 18.8366,83.9969 18.8366,138.167 0,74.9968 -12.3354,132.661 -36.8366,172.991 -24.5013,40.3414 -54.3391,67.3415 -89.5028,81.0004 -25.3272,9.83652 -66.1662,14.6754 -122.496,14.6754l-150.174 0 0 -548.007z"/>
+              <glyph unicode="3" horiz-adv-x="556" d="M41.9958 189.994l88.0021 12.0046c10.167,-50.0034 27.1746,-86.0036 51.3312,-108.001 24.1701,-21.9972 53.8394,-32.9958 89.0081,-32.9958 41.6605,0 76.8292,14.325 105.157,43.0018 28.3415,28.6634 42.5055,64.1674 42.5055,106.499 0,40.3326 -13.1715,73.6637 -39.662,99.9933 -26.343,26.1686 -59.835,39.3401 -100.677,39.3401 -16.6588,0 -37.3281,-3.33982 -62.1555,-9.83167l9.83167 76.9901c5.83462,-0.657233 10.6633,-0.992556 14.164,-0.992556 37.6635,0 71.3299,9.83167 101.496,29.334 30.0047,19.5024 45.0003,49.4937 45.0003,90.0007 0,32.1642 -10.9986,58.8291 -32.8348,79.9946 -21.8228,21.1656 -49.9899,31.6679 -84.5014,31.6679 -34.3237,0 -62.8261,-10.8376 -85.6549,-32.4995 -22.8422,-21.6619 -37.5025,-54.1614 -44.0078,-97.4985l-88.0021 16.0016c10.8376,59.0034 35.1687,104.835 73.3418,137.335 37.9988,32.4995 85.4939,48.6621 142.164,48.6621 39.0048,0 75.005,-8.32942 107.826,-25.1626 33.0092,-16.6723 58.1718,-39.501 75.5013,-68.3388 17.5039,-28.9987 26.1686,-59.6607 26.1686,-92.1602 0,-30.8363 -8.32942,-58.8425 -24.8273,-84.1661 -16.6723,-25.337 -41.3386,-45.51 -73.8381,-60.5057 42.3312,-9.67071 75.166,-30.0047 98.6654,-60.8276 23.3385,-30.6753 35.0077,-69.3448 35.0077,-115.499 0,-62.5042 -22.8422,-115.673 -68.3388,-159.171 -45.671,-43.4981 -103.333,-65.1734 -173,-65.1734 -62.8395,0 -115.002,18.8317 -156.502,56.3342 -41.6605,37.5025 -65.3343,86.0036 -71.1689,145.664z"/>
+              <glyph unicode="R" horiz-adv-x="722" d="M78.9879 0l0 716.006 317.342 0c63.8409,0 112.336,-6.50576 145.511,-19.3435 33.1496,-12.8377 59.6692,-35.4837 79.4845,-67.9877 19.8401,-32.504 29.6732,-68.5091 29.6732,-107.842 0,-50.8294 -16.4879,-93.6631 -49.3395,-128.501 -32.8268,-34.8381 -83.4823,-56.8385 -152.165,-66.324 25.1788,-12.0183 44.1746,-24.0117 57.1613,-35.6824 27.6867,-25.3278 53.8339,-57.1613 78.3423,-95.3268l123.833 -194.999 -118.32 0 -94.6812 149.012c-27.4881,43.1565 -50.3327,75.9833 -68.1615,98.828 -18.0026,22.8198 -33.9938,38.6621 -48.1724,47.8248 -14.0048,9.01371 -28.5062,15.3456 -43.1565,18.9958 -10.6774,2.18514 -28.1834,3.32737 -52.6669,3.32737l-109.679 0 0 -317.988 -95.004 0zm95.004 400.005l203.342 0c43.3304,0 77.0014,4.49444 101.336,13.4833 24.3345,8.83989 42.8337,23.1675 55.3238,43.0075 12.6639,19.6663 18.9958,40.9962 18.9958,64.1637 0,33.8449 -12.1673,61.8296 -36.6508,83.681 -24.5083,21.8266 -63.1704,32.653 -116.011,32.653l-226.336 0 0 -236.988z"/>
+              <glyph unicode="0" horiz-adv-x="556" d="M41.9958 353.336c0,84.5014 8.66474,152.827 26.0076,204.493 17.4904,51.8409 43.3237,91.6639 77.6608,119.509 34.1627,27.8318 77.3389,41.6605 129.341,41.6605 38.3341,0 72.0005,-7.67219 101.16,-23.1641 28.9987,-15.5053 53.0078,-37.8378 71.6652,-66.9975 18.6708,-28.9987 33.3311,-64.5027 44.0078,-106.338 10.8242,-41.8349 16.1626,-98.3301 16.1626,-169.164 0,-84.0051 -8.66474,-152.009 -25.8333,-203.675 -17.1685,-51.8275 -43.0018,-91.6639 -77.3389,-119.657 -34.1627,-28.0062 -77.4998,-42.0093 -129.824,-42.0093 -68.8351,0 -123.01,24.5054 -162.337,73.6772 -47.1732,59.996 -70.6727,157.159 -70.6727,291.664zm90.0007 -0.335323c0,-117.832 13.6678,-196.164 41.1642,-234.833 27.5099,-38.8304 61.5116,-58.1718 101.844,-58.1718 40.3326,0 74.3344,19.5024 101.831,58.3328 27.4965,39.0048 41.1642,117.175 41.1642,234.672 0,117.832 -13.6678,196.164 -41.1642,234.833 -27.3355,38.8304 -61.6726,58.1718 -102.837,58.1718 -40.3326,0 -72.6712,-17.1685 -96.8278,-51.3446 -30.1656,-43.4981 -45.1747,-124.163 -45.1747,-241.661z"/>
+              <glyph unicode="A" horiz-adv-x="666" d="M-1.50354 0l274.671 716.001 104.168 0 291.495 -716.001 -107.831 0 -82.8322 216.996 -301.501 0 -77.6651 -216.996 -100.504 0zm206.006 294.005l243.996 0 -74.6686 198.499c-22.5001,60.332 -39.4943,110.161 -51.332,149.496 -9.83652,-46.6626 -22.9978,-92.4993 -39.4943,-137.828l-78.5015 -210.167z"/>
+              <glyph unicode="I" horiz-adv-x="277" d="M92.9926 0l0 716.006 95.004 0 0 -716.006 -95.004 0z"/>
+              <glyph unicode="8" horiz-adv-x="556" d="M177.507 388.17c-36.51,13.3324 -63.5102,32.4995 -81.175,57.1659 -17.5039,24.8273 -26.3296,54.4967 -26.3296,88.9947 0,52.1762 18.6708,95.8353 55.9989,131.339 37.5025,35.4906 87.1705,53.3298 149.326,53.3298 62.3432,0 112.668,-18.1611 150.667,-54.4967 38.0122,-36.3356 57.0049,-80.5043 57.0049,-132.667 0,-33.1701 -8.66474,-62.1689 -25.9942,-86.6743 -17.3429,-24.6664 -43.6725,-43.659 -79.1764,-56.9915 43.8334,-14.3384 77.0036,-37.3416 99.8323,-69.3314 22.8422,-31.8423 34.3371,-69.8411 34.3371,-114.171 0,-61.1629 -21.6619,-112.508 -64.8246,-154.168 -43.3371,-41.6605 -100.168,-62.5042 -170.679,-62.5042 -70.4983,0 -127.329,20.8437 -170.666,62.6651 -43.1628,41.8349 -64.8246,94.0111 -64.8246,156.502 0,46.5026 11.8302,85.5073 35.4906,116.84 23.6738,31.4935 57.3402,52.8335 101.013,64.1674zm-17.5039 149.326c0,-34.0017 10.8242,-61.6592 32.3251,-83.1601 21.6753,-21.5009 50.0034,-32.3385 85.172,-32.3385 34.1627,0 61.8335,10.6633 83.3345,32.0032 21.5009,21.3265 32.1642,47.4951 32.1642,78.5058 0,32.3251 -10.9986,59.4997 -33.1701,81.4969 -21.9972,21.9972 -49.829,32.9958 -83.3345,32.9958 -33.8274,0 -61.6592,-10.8376 -83.6564,-32.3385 -21.8362,-21.4875 -32.8348,-47.1598 -32.8348,-77.1645zm-28.9987 -330.991c0,-25.176 5.83462,-49.3327 17.4904,-72.8321 11.6692,-23.3385 29.334,-41.513 53.0078,-54.3357 23.4994,-12.8362 48.8364,-19.3414 75.6623,-19.3414 42.3312,0 77.0036,13.5068 104.165,40.507 27.1746,27.0002 40.668,61.3239 40.668,102.998 0,42.3312 -14.0031,77.3389 -41.8349,104.996 -27.9928,27.6708 -63.3224,41.4996 -105.828,41.4996 -41.6739,0 -75.8366,-13.6678 -102.837,-41.0033 -27.0002,-27.3221 -40.4936,-61.4982 -40.4936,-102.488z"/>
+              <glyph unicode="5" horiz-adv-x="556" d="M41.9958 187.995l91.9992 7.00154c6.84059,-44.826 22.6678,-78.4924 47.3342,-101.16 24.6664,-22.5069 54.832,-33.8408 90.336,-33.8408 42.8409,0 78.6668,16.0016 107.84,47.8439 28.9987,31.9898 43.4981,74.321 43.4981,126.993 0,50.1643 -13.8421,89.6653 -41.6739,118.664 -27.8318,28.9987 -64.6637,43.4981 -110.496,43.4981 -28.5024,0 -54.0004,-6.49185 -76.6682,-19.489 -22.4935,-13.0105 -40.1717,-29.8437 -53.1688,-50.513l-82.9991 12.0046 68.996 367.997 355.013 0 0 -83.9917 -284.837 0 -38.1732 -193.173c42.8409,30.1656 87.8412,45.1747 134.84,45.1747 62.3298,0 115.002,-21.6753 157.83,-64.999 42.8274,-43.3371 64.3283,-99.0007 64.3283,-167.004 0,-64.838 -18.8317,-120.837 -56.4952,-167.997 -45.8319,-58.0109 -108.497,-87.0096 -187.834,-87.0096 -64.999,0 -117.993,18.3355 -159.171,54.832 -41.1642,36.51 -64.6637,84.8367 -70.4983,145.168z"/>
+              <glyph unicode="2" horiz-adv-x="556" d="M502.998 84.0051l0 -84.0051 -473.999 0c-0.670646,21.1656 2.83013,41.4996 10.3279,61.1629 12.1789,32.1642 31.6679,64.0064 58.5071,95.1646 26.8392,31.1716 65.1599,67.1719 115.002,108.001 77.4998,63.8321 130.159,114.332 157.669,151.673 27.6574,37.3281 41.4996,72.6712 41.4996,106.002 0,34.8333 -12.5008,64.1674 -37.5025,88.1631 -25.0017,23.8348 -57.6621,35.8393 -97.8338,35.8393 -42.5055,0 -76.5073,-12.6752 -102.005,-38.0122 -25.498,-25.1626 -38.3341,-60.1569 -38.6694,-104.996l-89.9873 9.00007c6.15653,67.3328 29.495,118.664 69.8276,154.007 40.4936,35.3296 94.6684,52.9944 162.833,52.9944 68.6607,0 123.171,-18.9927 163.168,-57.1659 40.1717,-38.1732 60.1703,-85.4939 60.1703,-141.828 0,-28.6768 -5.83462,-56.8439 -17.6782,-84.5014 -11.6558,-27.8318 -31.1582,-57.0049 -58.3328,-87.6668 -27.3221,-30.501 -72.4968,-72.6712 -135.497,-126.001 -52.8335,-44.3297 -86.8352,-74.3344 -101.831,-90.175 -14.9956,-15.8272 -27.3355,-31.6545 -37.1672,-47.6561l351.499 0z"/>
+              <glyph unicode="N" horiz-adv-x="722" d="M76.0027 0l0 716.001 97.3275 0 375.672 -562.005 0 562.005 90.9957 0 0 -716.001 -97.3275 0 -375.672 562.005 0 -562.005 -90.9957 0z"/>
+              <glyph unicode="Y" horiz-adv-x="666" d="M278.829 0l0 303.337 -275.998 412.669 114 0 141.513 -216.677c26.321,-40.152 50.8294,-80.3288 73.1526,-120.506 21.8266,37.5199 48.3462,79.5093 79.1617,126.167l138.682 211.015 110.499 0 -286.005 -412.669 0 -303.337 -95.004 0z"/>
+              <glyph unicode="7" horiz-adv-x="556" d="M46.9989 623.003l0 83.9917 463 0 0 -67.9901c-45.4966,-48.5011 -90.8323,-113.004 -135.497,-193.508 -44.8394,-80.4909 -79.3374,-163.329 -103.829,-248.501 -17.5039,-59.835 -28.8378,-125.666 -33.6664,-196.996l-90.0007 0c0.992556,56.3342 11.9911,124.499 33.1567,204.332 21.1656,79.9946 51.3312,156.998 90.8323,231.172 39.501,74.16 81.5103,136.664 126.001,187.499l-349.997 0z"/>
+              <glyph unicode="4" horiz-adv-x="556" d="M322.996 0l0 171.001 -310.992 0 0 81.0006 326.993 463.993 72.0005 0 0 -463.993 97.0022 0 0 -81.0006 -97.0022 0 0 -171.001 -88.0021 0zm0 252.002l0 322.165 -224.492 -322.165 224.492 0z"/>
+              <glyph unicode=" " horiz-adv-x="277" d=""/>
+              <glyph unicode="1" horiz-adv-x="556" d="M371.994 0l-87.9887 0 0 560.338c-21.1656,-20.334 -49.0108,-40.507 -83.3345,-60.6666 -34.3371,-20.173 -65.3343,-35.343 -92.6698,-45.3357l0 84.9977c49.1718,23.0032 92.1602,50.9959 129.005,84.0051 36.8319,32.8348 63.0005,64.6637 78.3314,95.6609l56.6562 0 0 -718.999z"/>
+              <glyph unicode="9" horiz-adv-x="556" d="M55.0064 165.998l83.9917 7.00154c7.1625,-39.662 20.8303,-68.3388 41.0033,-86.1646 20.1596,-17.8392 45.9929,-26.8392 77.6608,-26.8392 27.0002,0 50.674,6.16994 71.1689,18.6708 20.5083,12.3399 37.1672,28.8378 50.0034,49.668 12.8362,20.6693 23.6604,48.6621 32.4995,83.8307 8.83911,35.1687 13.1715,70.9946 13.1715,107.505 0,3.83609 -0.174368,9.83167 -0.509691,17.6648 -17.4904,-28.0062 -41.4996,-50.835 -71.8262,-68.1644 -30.34,-17.5039 -63.3358,-26.1686 -98.6654,-26.1686 -59.1644,0 -109.168,21.5009 -150.171,64.5027 -40.8289,42.8274 -61.3373,99.497 -61.3373,169.834 0,72.6578 21.34,130.991 64.1674,175.334 42.6665,44.1553 96.1706,66.3269 160.673,66.3269 46.3282,0 88.8337,-12.5008 127.503,-37.6635 38.4951,-25.0017 67.6548,-60.6666 87.6668,-107.169 19.9987,-46.3282 29.9913,-113.5 29.9913,-201.328 0,-91.5029 -9.83167,-164.335 -29.6694,-218.51 -19.8243,-54.3223 -49.4937,-95.5 -88.6594,-123.828 -39.1657,-28.3281 -84.9977,-42.5055 -137.67,-42.5055 -55.9989,0 -101.67,15.5053 -137.16,46.6769 -35.343,31.1582 -56.6696,74.9916 -63.8321,131.326zm358.997 315.834c0,50.3387 -13.3324,90.336 -39.9973,119.831 -26.5039,29.5084 -58.8425,44.3431 -96.8413,44.3431 -39.3267,0 -73.3284,-15.8407 -101.992,-47.6695 -28.8378,-31.8423 -43.1762,-73.1675 -43.1762,-123.841 0,-45.4966 13.6678,-82.4894 40.8423,-110.831 27.3221,-28.5024 61.3239,-42.6665 101.831,-42.6665 40.668,0 73.9991,14.164 100.168,42.6665 26.1686,28.3415 39.1657,67.8291 39.1657,118.168z"/>
+              <glyph unicode="6" horiz-adv-x="556" d="M499.001 540.997l-86.9962 -7.00154c-7.83314,34.5114 -19.0061,59.6741 -33.5055,75.3404 -23.8348,25.1626 -53.3298,37.6635 -88.3375,37.6635 -28.1671,0 -53.1554,-7.83314 -74.6563,-23.4994 -27.6708,-20.1596 -49.3327,-49.4937 -65.5087,-88.1631 -16.0016,-38.8304 -24.331,-93.9977 -25.0017,-165.502 21.1656,32.1642 47.1732,56.1599 77.8352,71.6652 30.6753,15.6663 62.6651,23.4994 96.3316,23.4994 58.6681,0 108.671,-21.6619 150.01,-64.838 41.1642,-43.1628 61.8335,-98.8264 61.8335,-167.326 0,-45.0003 -9.67071,-86.6743 -28.9987,-125.33 -19.5024,-38.6694 -46.0063,-68.1779 -80.008,-88.6728 -33.8274,-20.4949 -72.3359,-30.8363 -115.338,-30.8363 -73.1675,0 -132.989,27.0002 -179.331,80.8396 -46.1673,53.826 -69.3314,142.66 -69.3314,266.327 0,138.341 25.6723,239.005 76.8292,301.844 44.6784,54.6576 104.835,81.9932 180.672,81.9932 56.3342,0 102.662,-15.8272 138.663,-47.3342 36.0003,-31.4935 57.6755,-75.005 64.838,-130.669zm-360.003 -308.993c0,-30.34 6.50526,-59.3387 19.3414,-87.0096 12.8227,-27.6574 30.8229,-48.6621 53.6651,-63.1614 22.9897,-14.4994 47.3342,-21.8362 73.1675,-21.8362 37.4891,0 69.4923,15.0091 95.9962,45.0003 26.5039,30.0047 39.8364,70.6727 39.8364,122.165 0,49.5071 -13.1715,88.5118 -39.3401,117.001 -26.1686,28.5024 -59.4997,42.8409 -99.9933,42.8409 -39.6754,0 -73.5028,-14.3384 -101.174,-42.8409 -27.6708,-28.489 -41.4996,-65.8306 -41.4996,-112.159z"/>
+          </font>
+             <style type="text/css">
+           <![CDATA[
+           @font-face { font-family:"Arial";font-variant:normal;font-style:normal;font-weight:normal;src:url("#FontID0") format(svg)}
+           .str2 {stroke:#AE4A84;stroke-width:10.4134}
+           .str3 {stroke:#B662A2;stroke-width:10.4134}
+           .str0 {stroke:#79C194;stroke-width:10.4134}
+           .str4 {stroke:#65BFE7;stroke-width:10.4134}
+           .str1 {stroke:#B2B3B3;stroke-width:41.6654}
+           .str6 {stroke:#F2E964;stroke-width:41.6654}
+           .str5 {stroke:#1F1B20;stroke-width:41.6654;stroke-dasharray:83.330709 41.665354}
+           .fil1 {fill:none}
+           .fil3 {fill:#FEFEFE}
+           .fil6 {fill:#2B2A29}
+           .fil5 {fill:#F2E964}
+           .fil2 {fill:#AE4A84}
+           .fil0 {fill:#79C194}
+           .fil4 {fill:#65BFE7}
+           .fnt2 {font-weight:normal;font-size:158.551px;font-family:'Arial'}
+           .fnt0 {font-weight:normal;font-size:293.524px;font-family:'Arial'}
+           .fnt1 {font-weight:normal;font-size:371.827px;font-family:'Arial'}
+           .area {fill:#666666; stroke:#000000;stroke-width:20}
+           ]]>
+          </style>
+         </defs>
+                    <g id="Layer_x0020_1">
+          <metadata id="CorelCorpID_0Corel-Layer"/>
+                        <path class="fil0 str0" d="M1711 3508c-90,14 -270,84 -319,230 -49,145 -56,173 -181,208 -125,35 -201,0 -201,0l0 66c0,0 111,73 146,125 35,52 142,260 219,323 76,62 152,-156 152,-156 0,0 112,31 160,79 49,49 136,164 174,167 38,4 14,94 14,94l93 -21 25 101 93 -84 49 56c0,0 87,-80 66,-149 -21,-70 -94,-98 -62,-171 31,-72 107,-107 114,-145 7,-39 -59,-98 7,-115 66,-17 59,-45 94,-76 35,-32 208,59 236,62 28,4 55,108 52,143 -3,34 -17,152 7,177 24,24 28,97 28,97 0,0 146,-7 194,-7 49,0 153,21 163,-21 11,-42 73,-76 73,-76 0,0 87,-21 111,-25 25,-3 198,-73 230,-93 31,-21 62,-18 62,-18 0,0 -278,-451 -375,-555 -97,-104 -222,-334 -222,-334l-535 -444 -177 -115c0,0 -392,-7 -420,39 -28,45 -49,131 -49,131l7 87 38 28 -66 392z"/>
+                        <line class="fil1 str1" x1="3559" y1="7839" x2="3940" y2= "8310" />
+                        <line class="fil1 str1" x1="3034" y1="4028" x2="3351" y2= "4526" />
+                        <line class="fil1 str1" x1="3782" y1="4915" x2="3998" y2= "5134" />
+                        <line class="fil1 str1" x1="4267" y1="5637" x2="4482" y2= "5856" />
+                        <line class="fil1 str1" x1="1973" y1="4129" x2="2330" y2= "6089" />
+                        <line class="fil1 str1" x1="2084" y1="6229" x2="3455" y2= "5707" />
+                        <line class="fil1 str1" x1="2517" y1="6134" x2="2782" y2= "7191" />
+                        <line class="fil1 str1" x1="2781" y1="7249" x2="3284" y2= "7058" />
+                        <line class="fil1 str1" x1="3333" y1="7106" x2="3836" y2= "6914" />
+                        <line class="fil1 str1" x1="3686" y1="7669" x2="4225" y2= "7685" />
+                        <line class="fil1 str1" x1="4576" y1="7885" x2="5115" y2= "7901" />
+                        <line class="fil1 str1" x1="5140" y1="7043" x2="5287" y2= "7630" />
+                        <line class="fil1 str1" x1="4667" y1="6410" x2="5028" y2= "6897" />
+                        <line class="fil1 str1" x1="4523" y1="6017" x2="4883" y2= "6503" />
+                        <line class="fil1 str1" x1="4272" y1="6466" x2="4571" y2= "5940" />
+                        <line class="fil1 str1" x1="3897" y1="6609" x2="4364" y2= "6431" />
+                        <line class="fil1 str1" x1="3910" y1="6969" x2="4291" y2= "7440" />
+                        <line class="fil1 str1" x1="4360" y1="6352" x2="4585" y2= "6656" />
+                        <line class="fil1 str1" x1="3481" y1="5477" x2="3609" y2= "4994" />
+                        <line class="fil1 str1" x1="3550" y1="5998" x2="3814" y2= "6542" />
+                        <line class="fil1 str1" x1="3681" y1="5692" x2="4148" y2= "5514" />
+                        <line class="fil1 str1" x1="5734" y1="4623" x2="6094" y2= "5110" />
+                        <line class="fil1 str1" x1="3091" y1="6552" x2="3231" y2= "7110" />
+                        <line class="fil1 str1" x1="2944" y1="6553" x2="2883" y2= "7125" />
+                        <line class="fil1 str1" x1="3193" y1="5982" x2="2890" y2= "6471" />
+                        <line class="fil1 str1" x1="4171" y1="8350" x2="4446" y2= "7887" />
+                        <line class="fil1 str1" x1="4347" y1="8378" x2="4885" y2= "8394" />
+                        <line class="fil1 str1" x1="4782" y1="5959" x2="5142" y2= "6446" />
+                        <line class="fil1 str1" x1="5172" y1="6442" x2="5014" y2= "6994" />
+                        <line class="fil1 str1" x1="3156" y1="7182" x2="3516" y2= "7668" />
+                        <line class="fil1 str1" x1="4501" y1="7573" x2="4896" y2= "7267" />
+                        <path id="3_IQ" class="str2 area" d="M4325 7290l400 191c103,49 -41,389 138,533 -57,50 -585,146 -585,146 0,0 -40,-249 -78,-256 -18,-3 -218,-143 -180,-170 42,-31 140,-237 158,-297 33,-113 147,-147 147,-147z"/>
+                        <path id="1_DelELTE" class="str2 area" d="M4976 8085l-340 318 69 119 542 -118c0,0 31,98 57,136 89,-12 421,-115 421,-115l-30 -179 97 -33 -130 -720 -60 11 -27 -31 -436 103 -304 -40c-92,170 12,430 141,549z"/>
+                        <path id="17_Schonherz" class="str2 area" d="M2961 7604l-25 59c0,0 59,0 106,43 47,44 -33,287 -43,322 -11,34 257,85 257,85l251 55 141 -191c0,0 -56,-56 -10,-90 46,-34 191,-137 191,-137l-27 -104 -122 -264c0,0 -59,48 -101,62 -41,14 -69,-21 -69,-21l-549 181z"/>
+                        <path id="18_Pinyo" class="str2 area" d="M3503 6743l115 48 80 -326 375 -14c0,0 97,177 97,254 0,76 -66,187 -108,336 -42,150 -149,87 -170,84 -21,-4 -243,-111 -281,-146 -38,-35 -153,-153 -153,-153l45 -83z"/>
+                        <path id="6_Karman" class="str2 area" d="M4437 6878c0,0 -108,-31 -114,-62 -7,-32 0,-101 52,-188 52,-87 62,-107 62,-107l191 -212 149 -97 32 31 132 31c-81,8 -79,145 7,191 83,45 7,45 7,45l-518 368z"/>
+                        <path id="7_E" class="str2 area" d="M4253 6495l-66 -108 38 -136c0,0 70,-10 115,-27 45,-18 115,55 115,55l76 -59 55 87c0,0 -170,181 -229,271 -59,90 -104,-83 -104,-83z"/>
+                        <path id="15_Allee" class="str2 area" d="M2909 7543l-329 -48 20 -240 -177 -49 -10 -409 38 -84c0,0 215,38 240,59 24,21 -14,32 34,42 49,10 56,-10 56,-10 0,0 260,66 281,76 21,10 -153,663 -153,663z"/>
+                        <path id="16_MOL" class="str2 area" d="M2972 7495c24,-18 76,-344 76,-344l97 -438 240 94 -28 69 108 167 135 -14c0,0 -45,341 -80,347 -34,7 -416,150 -416,150l-132 -31z"/>
+                        <path id="12_Moricz" class="str2 area" d="M1743 6290l-108 430 469 -208c0,0 83,24 142,69 59,45 149,98 149,98 0,0 136,-237 181,-244 45,-6 76,-76 76,-76l98 -97 -52 -97c0,0 0,-157 -63,-202 -62,-45 -288,-80 -288,-80 0,0 -143,122 -184,98 -42,-25 -361,-7 -361,-7l-59 316z"/>
+                        <path id="9_K" class="str2 area" d="M4059 4998l-247 101c0,0 -7,69 14,97 21,28 188,274 208,281 21,7 -86,59 -73,108 14,48 -6,118 18,118 24,0 118,-4 118,-4l37 147 -27 48 77 7 385 -309 -510 -594z"/>
+                        <path id="13_Gardonyi" class="str2 area" d="M2968 5363c42,10 379,100 379,100l69 -38 323 35c0,0 4,528 -10,573 -14,45 -302,-25 -302,-25 0,0 -212,275 -233,257 -21,-17 -285,-215 -285,-215l-145 -260c0,0 191,-195 184,-233 -7,-38 20,-194 20,-194z"/>
+                        <path id="8_R" class="str2 area" d="M4206 5903c21,-7 384,-266 384,-266 0,0 177,184 208,236 32,52 205,260 198,292 -7,31 -80,62 -80,62l-80 -10 -41 -49 -179 106 -95 -116 -56 69 -87 -48 -142 17 -30 -293z"/>
+                        <text x="2095" y="6354"  class="fil3 fnt0">12</text>
+                        <text x="4109" y="5553"  class="fil3 fnt0">9</text>
+                        <text x="3161" y="5837"  class="fil3 fnt0">13</text>
+                        <text x="4508" y="6062"  class="fil3 fnt0">8</text>
+                        <text x="5230" y="8079"  class="fil3 fnt0">1</text>
+                        <text x="4364" y="7828"  class="fil3 fnt0">3</text>
+                        <text x="3103" y="7289"  class="fil3 fnt0">16</text>
+                        <text x="3703" y="6874"  class="fil3 fnt0">18</text>
+                        <text x="4281" y="6516"  class="fil3 fnt0">7</text>
+                        <text x="4617" y="6591"  class="fil3 fnt0">6</text>
+                        <path id="14_Sarki" class="str2 area" d="M2668 6441c0,0 97,-132 135,-163 39,-32 167,-105 167,-105l188 139 -14 202 66 76 -14 101 -77 -25 -55 167 -306 -80 -90 -312z"/>
+                        <text x="2766" y="6608"  class="fil3 fnt0">14</text>
+                        <path id="2_Tuskecsarnok" class="str3 area" d="M3692 8486c0,0 73,-292 212,-386 139,-93 195,-118 195,-118l62 -52c0,0 93,152 90,291 106,-33 302,-58 302,-58l112 177 -428 417 -576 -94 31 -177z"/>
+                        <text x="4048" y="8516"  class="fil3 fnt0">2</text>
+                        <path class="fil4 str4" d="M2555 2734c0,0 742,989 1009,1339 266,350 775,958 925,1141 150,184 875,1092 1008,1350 133,259 242,684 325,1017 83,333 250,1131 217,1378 175,0 966,0 966,0 0,0 -25,-953 -291,-1845 -267,-891 -717,-1666 -1525,-2408 -809,-742 -859,-983 -1050,-1183 -192,-200 -700,-789 -700,-789l-884 0z"/>
+                        <line class="fil1 str1" x1="5129" y1="6269" x2="6136" y2= "5356" />
+                        <line class="fil1 str1" x1="3713" y1="4636" x2="4639" y2= "3797" />
+                        <line class="fil1 str5" x1="3618" y1="4304" x2="4399" y2= "3686" />
+                        <line class="fil1 str1" x1="2796" y1="3620" x2="4559" y2= "3616" />
+                        <line class="fil1 str5" x1="3683" y1="4400" x2="4464" y2= "3781" />
+                        <line class="fil1 str1" x1="5529" y1="7194" x2="6446" y2= "5662" />
+                        <path id="19_Boraros" class="str2 area" d="M5861 4991c41,0 198,-128 198,-128l198 -56 222 479 153 21 83 -104 149 97 -198 288 35 202 -139 73 -135 111 -111 -191 -21 -111 -150 86 -55 -100 108 -73 -386 -535 49 -59z"/>
+                        <path class="fil5 str6" d="M7355 3735c0,0 -460,1329 -578,1416 -688,503 -2979,2177 -3097,2231 -138,63 -139,252 -581,176 -442,-75 -975,-200 -975,-200 0,0 -1743,-575 -1887,-646 -145,-71 -145,-91 -145,-18 0,73 39,73 183,144 145,71 1888,646 1888,646 0,0 533,125 975,200 442,75 442,-114 581,-177 117,-53 2438,-1749 3144,-2265 127,-93 555,-1389 568,-1365l-76 -142z"/>
+                        <text x="3177" y="8018"  class="fil3 fnt0">17</text>
+                        <path id="11_Gellert"  class="str2 area" d="M1532 3633c0,0 59,-54 200,-87 142,-34 117,-421 117,-421 0,0 367,-13 533,66 167,80 367,146 367,146l233 259c0,0 234,341 200,408 -33,67 -270,175 -270,175l-196 -29 -79 -159c0,0 -234,-70 -309,-25 -75,46 -141,134 -141,134 0,0 54,79 -34,108 -87,29 -300,83 -300,83 0,0 -425,-291 -354,-370 71,-80 146,-109 146,-109l-46 -112c0,0 -21,33 -71,37 -50,4 4,-104 4,-104z"/>
+                        <text x="2124" y="3775"  class="fil3 fnt0">11</text>
+                        <g transform="matrix(0.640931 0.767599 -0.767599 0.640931 6595.58 -1822.33)">
+           <text x="3152" y="5846"  class="fil3 fnt1">D   U   N   A</text>
+          </g>
+                        <line class="fil1 str5" x1="5274" y1="6243" x2="6081" y2= "5660" />
+                        <line class="fil1 str5" x1="5347" y1="6345" x2="6154" y2= "5761" />
+                        <text x="6026" y="5339"  class="fil3 fnt0">19</text>
+                        <path id="5_Goldmann" class="str2 area" d="M5048 6184l-43 85c0,0 -87,63 -40,114 46,52 80,75 80,75 0,0 -4,56 -4,80 0,24 -28,52 18,101 45,48 114,86 114,86l167 -152 21 -165 -219 -295 -94 71z"/>
+                        <text x="5102" y="6542"  class="fil3 fnt0">5</text>
+                        <path id="20_Corvinus" class="str2 area" d="M4371 3685c0,0 337,469 417,518 80,48 729,479 729,479 0,0 70,141 145,168 83,30 171,-55 177,-108 7,-67 -285,-404 -284,-418 4,-34 -208,-173 -260,-270 -52,-98 -358,-316 -393,-382 -34,-66 -34,-66 -34,-66l-143 -157 -354 236z"/>
+                        <text x="4921" y="4228"  class="fil3 fnt0">20</text>
+                        <path id="10_CHMAX" class="str2 area" d="M3500 4345c0,0 -361,87 -403,146 -42,59 -63,83 -14,111 49,28 448,73 448,73 0,0 -49,122 -63,142 -13,21 49,150 46,181 -4,31 215,87 215,87l326 -129c0,0 -239,-399 -319,-455 -80,-55 -146,-204 -146,-204l-90 48z"/>
+                        <text x="3540" y="4908"  class="fil3 fnt0">10</text>
+                        <text x="2581" y="7181"  class="fil3 fnt0">15</text>
+                        <path id="4_EszakELTE" class="str2 area" d="M4778 6936c31,14 -170,335 -145,352 88,56 218,121 218,121 0,0 558,61 623,-9 95,-100 85,-68 114,-125 68,-18 -97,-283 -97,-283l-144 -298c0,0 -29,-39 -71,3 -41,41 -66,89 -150,79 -83,-11 -79,-79 -118,-107 -40,-27 -29,-41 -86,-4 -27,18 -97,68 -163,115l19 156z"/>
+                        <text x="5073" y="7189"  class="fil3 fnt0">4</text>
+                        <g transform="matrix(0.820581 -0.571531 0.571531 0.820581 -2506.59 4727.44)">
+           <text x="3793" y="5846"  class="fil6 fnt2">I R I N Y I</text>
+          </g>
+         </g>
+        </svg>
+    </div>
 
     <div class="help">
+        <h3>HELYSZÍNEK</h3>
         <ul>
-            <li>1. - Dél-ELTE          </li>
-            <li>2. - Tüskecsarnok      </li>
-            <li>3. - IQ-épület         </li>
-            <li>4. - Észak-ELTE        </li>
-            <li>5. - Goldmann tér      </li>
-            <li>6. - Kármán            </li>
-            <li>7. - E épület          </li>
-            <li>8. - R épület          </li>
-            <li>9. - K épület          </li>
-            <li>10. - CHMAX            </li>
-            <li>11. - Gellért-hegy     </li>
-            <li>12. - Móricz           </li>
-            <li>13. - Gárdonyi tér     </li>
-            <li>14. - Sarki tanszék    </li>
-            <li>15. - Allee            </li>
-            <li>16. - MOL              </li>
-            <li>17. - Schönherz        </li>
-            <li>18. - Pinyó            </li>
-            <li>19. - Boráros tér      </li>
-            <li>20. - Corvinus         </li>
+            <li>&nbsp;1. Dél-ELTE          </li>
+            <li>&nbsp;2. Tüskecsarnok      </li>
+            <li>&nbsp;3. IQ-épület         </li>
+            <li>&nbsp;4. Észak-ELTE        </li>
+            <li>&nbsp;5. Goldmann tér      </li>
+            <li>&nbsp;6. Kármán            </li>
+            <li>&nbsp;7. E épület          </li>
+            <li>&nbsp;8. R épület          </li>
+            <li>&nbsp;9. K épület          </li>
+            <li>10. CHMAX            </li>
+            <li>11. Gellért-hegy     </li>
+            <li>12. Móricz           </li>
+            <li>13. Gárdonyi tér     </li>
+            <li>14. Sarki tanszék    </li>
+            <li>15. Allee            </li>
+            <li>16. MOL              </li>
+            <li>17. Schönherz        </li>
+            <li>18. Pinyó            </li>
+            <li>19. Boráros tér      </li>
+            <li>20. Corvinus         </li>
         </ul>
     </div>
 
-    <div class="next-team">A</div>
+    <div class="next-team" id="next-team">
+        A
+    </div>
 </div>
 
 </body>

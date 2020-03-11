@@ -19,6 +19,7 @@
 
                 stompClient.subscribe('/user/topic/question', function (data) {
                     let question = JSON.parse(data.body);
+                    console.log(question);
 
                     if (question.selection) {
                         document.getElementById("q-sel-question").innerText = question.question;
@@ -31,17 +32,19 @@
                         document.getElementById("q-num").style.display = "none";
                         document.getElementById("wait").style.display = "none";
                     } else {
-                        document.getElementById("q-sel-question").innerText = question.question;
+                        document.getElementById("q-num-question").innerText = question.question;
                         document.getElementById("q-num-answer").value = "";
 
-                        document.getElementById("q-sel").style.display = "block";
-                        document.getElementById("q-num").style.display = "none";
+                        document.getElementById("q-sel").style.display = "none";
+                        document.getElementById("q-num").style.display = "block";
                         document.getElementById("wait").style.display = "none";
                     }
                 });
 
                 stompClient.subscribe('/user/topic/hide', function (data) {
                     let hideObject = JSON.parse(data.body);
+                    console.log("hide");
+
                     hideAll();
                 });
 
@@ -85,7 +88,7 @@
             <input type="text" id="username" maxlength="16" autocomplete="off"><br />
             Csapat színe:<br />
             <select id="teamId">
-                <option value="1">Lila</option>
+                <option value="1">Zöld</option>
                 <option value="2">Türkiz</option>
                 <option value="3">Magenta</option>
                 <option value="4">Narancssárga</option>

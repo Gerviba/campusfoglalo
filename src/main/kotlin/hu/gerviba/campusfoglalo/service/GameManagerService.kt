@@ -5,8 +5,11 @@ import hu.gerviba.campusfoglalo.model.UserEntity
 import hu.gerviba.campusfoglalo.packet.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor
+import org.springframework.messaging.simp.SimpMessageType
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.stereotype.Service
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -41,8 +44,8 @@ class GameManagerService {
 
     @PostConstruct
     fun init() {
-        selQuestions = Files.readAllLines(Path.of("${rootDir}/questions-sel.csv"))
-                .map { it.split("[;,]") }
+        selQuestions = Files.readAllLines(Path.of("${rootDir}/questions-sel.csv"), StandardCharsets.UTF_8)
+                .map { it.split(";") }
                 .filter { it.size == 6 }
                 .map { QuestionEntity(
                         question = it[0],
@@ -50,10 +53,9 @@ class GameManagerService {
                         trueAnswer = it[5].toInt(),
                         selection = true
                 ) }
-        selQuestions.forEach{println(it)}
 
-        numQuestions = Files.readAllLines(Path.of("${rootDir}/questions-num.csv"))
-                .map { it.split("[;,]") }
+        numQuestions = Files.readAllLines(Path.of("${rootDir}/questions-num.csv"), StandardCharsets.UTF_8)
+                .map { it.split(";") }
                 .filter { it.size == 2 }
                 .map { QuestionEntity(
                         question = it[0],
@@ -61,7 +63,6 @@ class GameManagerService {
                         trueAnswer = it[1].toInt(),
                         selection = false
                 ) }
-        numQuestions.forEach{println(it)}
     }
 
     fun getOrCreateUser(sessionId: String): UserEntity {
@@ -146,6 +147,11 @@ class GameManagerService {
     }
 
     fun sendMapUpdate() {
+        for (teamScore in teamScores)
+            teamScore.value.score = placeStates.asSequence()
+                    .filter { it.value.owner == teamScore.value.teamId }
+                    .count()
+
         outgoing.convertAndSend("/topic/status", ScreenStatusPacket(
                 users = teamScores,
                 places = placeStates,
@@ -174,7 +180,14 @@ class GameManagerService {
         )
         userStorage.asSequence()
                 .filter { it.value.teamId in forTeams }
-                .forEach { outgoing.convertAndSendToUser(it.value.sessionId, "/topic/question", playerQuestionPacket) }
+                .forEach {
+                    val headerAccessor = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE)
+                    with (headerAccessor) {
+                        sessionId = it.value.sessionId
+                        setLeaveMutable(true)
+                    }
+                    outgoing.convertAndSendToUser(it.value.sessionId, "/topic/question", playerQuestionPacket, headerAccessor.messageHeaders)
+                }
 
     }
 
@@ -195,7 +208,14 @@ class GameManagerService {
         )
         userStorage.asSequence()
                 .filter { it.value.teamId in forTeams }
-                .forEach { outgoing.convertAndSendToUser(it.value.sessionId, "/topic/question", playerQuestionPacket) }
+                .forEach {
+                    val headerAccessor = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE)
+                    with (headerAccessor) {
+                        sessionId = it.value.sessionId
+                        setLeaveMutable(true)
+                    }
+                    outgoing.convertAndSendToUser(it.value.sessionId, "/topic/question", playerQuestionPacket, headerAccessor.messageHeaders)
+                }
     }
 
     fun sendShowAnswer() {
@@ -213,8 +233,14 @@ class GameManagerService {
     }
 
     private fun hideAll() {
-        for (user in userStorage)
-            outgoing.convertAndSendToUser(user.value.sessionId, "/topic/hide", PlayerHidePacket())
+        for (user in userStorage) {
+            val headerAccessor = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE)
+            with (headerAccessor) {
+                sessionId = user.value.sessionId
+                setLeaveMutable(true)
+            }
+            outgoing.convertAndSendToUser(user.value.sessionId, "/topic/hide", PlayerHidePacket(), headerAccessor.messageHeaders)
+        }
     }
 
 

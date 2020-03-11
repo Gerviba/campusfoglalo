@@ -64,11 +64,12 @@ class AdminApiController {
     }
 
     @PostMapping("/set-team-selected")
-    fun setSelected(@RequestBody data: SetTeamSelectedDto): Boolean {
+    fun setSelectedTeam(@RequestBody data: SetTeamSelectedDto): Boolean {
         if (!game.isUuidValid(data.uuid))
             return false
 
         game.setSelectedTeam(data.selected)
+        game.sendMapUpdate()
         return true
     }
 
