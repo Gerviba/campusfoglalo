@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>WS3 - Websocket Demo</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:700|Roboto+Mono|Roboto:300&display=swap&subset=latin-ext" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="../static/css/style.css" th:href="@{/css/style.css}" rel="stylesheet">
+    <script>
+
+        function connect(username, teamId) {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({username: username, teamId: teamId}, function (frame) {
+                document.getElementById("login-box").innerHTML = "";
+                document.getElementById("wait").style.display = "block";
+
+                stompClient.subscribe('/topic/question', function (data) {
+                    let question = JSON.parse(data.body);
+
+                    if (question.selection) {
+                        document.getElementById("q-sel-question").innerText = question.question;
+                        document.getElementById("q-sel-a").innerText = question.answers[0];
+                        document.getElementById("q-sel-b").innerText = question.answers[1];
+                        document.getElementById("q-sel-c").innerText = question.answers[2];
+                        document.getElementById("q-sel-d").innerText = question.answers[3];
+
+                        document.getElementById("q-sel").style.display = "block";
+                        document.getElementById("q-num").style.display = "none";
+                        document.getElementById("wait").style.display = "none";
+                    } else {
+                        document.getElementById("q-sel-question").innerText = question.question;
+                        document.getElementById("q-num-answer").value = "";
+
+                        document.getElementById("q-sel").style.display = "block";
+                        document.getElementById("q-num").style.display = "none";
+                        document.getElementById("wait").style.display = "none";
+                    }
+                });
+
+                stompClient.subscribe('/user/topic/hide', function (data) {
+                    let hideObject = JSON.parse(data.body);
+                    hideAll();
+                });
+
+            });
+
+        }
+
+        function sendAnswer(answer) {
+            stompClient.send("/app/answer", {}, JSON.stringify({
+                'answer': answer
+            }));
+            hideAll();
+        }
+
+        function join() {
+            connect(document.getElementById("username").value, document.getElementById("teamId").value)
+        }
+
+        function hideAll() {
+            document.getElementById("q-sel").style.display = "none";
+            document.getElementById("q-num").style.display = "none";
+            document.getElementById("wait").style.display = "block";
+        }
+
+        function answerNumericQuestion() {
+            sendAnswer(document.getElementById("q-num-answer").value);
+        }
+
+        function answerQuestion(answer) {
+            sendAnswer(answer);
+        }
+
+    </script>
+</head>
+<body>
+
+<div class="screen">
+
+    <h1>Campus Foglaló</h1>
+
+    <div class="teams">
+        <div class="team">
+            <div id="a-name" class="team-name">Alpha csapat</div>
+            <ins id="a-score">0</ins>
+        </div>
+        <div class="team">
+            <div id="b-name"  class="team-name">Beta csapat</div>
+            <ins id="b-score">0</ins>
+        </div>
+        <div class="team">
+            <div id="c-name"  class="team-name">Gamma csapat</div>
+            <ins id="c-score">0</ins>
+        </div>
+        <div class="team">
+            <div id="d-name" class="team-name">Delta csapat</div>
+            <ins id="d-score">0</ins>
+        </div>
+    </div>
+
+    <div class="map"></div>
+
+    <div class="help">
+        <ul>
+            <li>1. - Dél-ELTE          </li>
+            <li>2. - Tüskecsarnok      </li>
+            <li>3. - IQ-épület         </li>
+            <li>4. - Észak-ELTE        </li>
+            <li>5. - Goldmann tér      </li>
+            <li>6. - Kármán            </li>
+            <li>7. - E épület          </li>
+            <li>8. - R épület          </li>
+            <li>9. - K épület          </li>
+            <li>10. - CHMAX            </li>
+            <li>11. - Gellért-hegy     </li>
+            <li>12. - Móricz           </li>
+            <li>13. - Gárdonyi tér     </li>
+            <li>14. - Sarki tanszék    </li>
+            <li>15. - Allee            </li>
+            <li>16. - MOL              </li>
+            <li>17. - Schönherz        </li>
+            <li>18. - Pinyó            </li>
+            <li>19. - Boráros tér      </li>
+            <li>20. - Corvinus         </li>
+        </ul>
+    </div>
+
+    <div class="next-team">A</div>
+</div>
+
+</body>
+</html>
