@@ -40,6 +40,7 @@ class WebsocketEventListener {
             user.name = username
             user.screen = false
             user.teamId = teamId.toInt()
+            game.registerPlayer(user)
             println("Received a new web socket connection by user: '${headerAccessor.sessionId}' -> ${user.name}")
         }
     }

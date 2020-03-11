@@ -2,7 +2,7 @@
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>WS3 - Websocket Demo</title>
+    <title>Campus Foglaló</title>
     <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:700|Roboto+Mono|Roboto:300&display=swap&subset=latin-ext" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
@@ -10,73 +10,32 @@
     <link href="../static/css/style.css" th:href="@{/css/style.css}" rel="stylesheet">
     <script>
 
-        function connect(username, teamId) {
+        function connect() {
             const socket = new SockJS('/ws');
             stompClient = Stomp.over(socket);
-            stompClient.connect({username: username, teamId: teamId}, function (frame) {
-                document.getElementById("login-box").innerHTML = "";
-                document.getElementById("wait").style.display = "block";
+            stompClient.connect({}, function (frame) {
 
                 stompClient.subscribe('/topic/question', function (data) {
                     let question = JSON.parse(data.body);
-
-                    if (question.selection) {
-                        document.getElementById("q-sel-question").innerText = question.question;
-                        document.getElementById("q-sel-a").innerText = question.answers[0];
-                        document.getElementById("q-sel-b").innerText = question.answers[1];
-                        document.getElementById("q-sel-c").innerText = question.answers[2];
-                        document.getElementById("q-sel-d").innerText = question.answers[3];
-
-                        document.getElementById("q-sel").style.display = "block";
-                        document.getElementById("q-num").style.display = "none";
-                        document.getElementById("wait").style.display = "none";
-                    } else {
-                        document.getElementById("q-sel-question").innerText = question.question;
-                        document.getElementById("q-num-answer").value = "";
-
-                        document.getElementById("q-sel").style.display = "block";
-                        document.getElementById("q-num").style.display = "none";
-                        document.getElementById("wait").style.display = "none";
-                    }
+                    console.log(question)
                 });
 
-                stompClient.subscribe('/user/topic/hide', function (data) {
-                    let hideObject = JSON.parse(data.body);
-                    hideAll();
+                stompClient.subscribe('/topic/answer', function (data) {
+                    let answer = JSON.parse(data.body);
+                    console.log(answer)
                 });
 
+                stompClient.subscribe('/topic/status', function (data) {
+                    let status = JSON.parse(data.body);
+                    console.log(status)
+                });
             });
 
         }
 
-        function sendAnswer(answer) {
-            stompClient.send("/app/answer", {}, JSON.stringify({
-                'answer': answer
-            }));
-            hideAll();
-        }
-
-        function join() {
-            connect(document.getElementById("username").value, document.getElementById("teamId").value)
-        }
-
-        function hideAll() {
-            document.getElementById("q-sel").style.display = "none";
-            document.getElementById("q-num").style.display = "none";
-            document.getElementById("wait").style.display = "block";
-        }
-
-        function answerNumericQuestion() {
-            sendAnswer(document.getElementById("q-num-answer").value);
-        }
-
-        function answerQuestion(answer) {
-            sendAnswer(answer);
-        }
-
     </script>
 </head>
-<body>
+<body onload="connect()">
 
 <div class="screen">
 

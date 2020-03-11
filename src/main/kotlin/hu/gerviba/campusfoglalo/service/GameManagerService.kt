@@ -2,11 +2,13 @@ package hu.gerviba.campusfoglalo.service
 
 import hu.gerviba.campusfoglalo.model.QuestionEntity
 import hu.gerviba.campusfoglalo.model.UserEntity
-import hu.gerviba.campusfoglalo.packet.PlaceStatus
-import hu.gerviba.campusfoglalo.packet.ScreenStatusPacket
+import hu.gerviba.campusfoglalo.packet.*
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.stereotype.Service
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.PostConstruct
@@ -17,23 +19,60 @@ class GameManagerService {
     @Autowired
     lateinit var outgoing: SimpMessagingTemplate
 
+    @Value("\${app.root-dir:.}")
+    lateinit var rootDir: String
+
+    private lateinit var numQuestions: List<QuestionEntity>
+    private lateinit var selQuestions: List<QuestionEntity>
+
     val userStorage = ConcurrentHashMap<String, UserEntity>()
+
+    var numQueue: MutableList<QuestionEntity> = mutableListOf()
+    var selQueue: MutableList<QuestionEntity> = mutableListOf()
+    var lastQuestion: QuestionEntity = QuestionEntity("", listOf(), 0, false)
 
     var gameUuid: String = ""
     var placeStates: Map<String, PlaceStatus> = mapOf()
     var activeTeam: Int = 0
-    var currentQuestion: QuestionEntity? = null
     var givenAnswers: MutableMap<Int, Int> = mutableMapOf()
+    var teamScores: MutableMap<Int, TeamInfo> = mutableMapOf()
+
+    data class TeamInfo(var name: String, var score: Int, var teamId: Int)
 
     @PostConstruct
     fun init() {
+        selQuestions = Files.readAllLines(Path.of("${rootDir}/questions-sel.csv"))
+                .map { it.split("[;,]") }
+                .filter { it.size == 6 }
+                .map { QuestionEntity(
+                        question = it[0],
+                        answers = listOf(it[1], it[2], it[3], it[4]),
+                        trueAnswer = it[5].toInt(),
+                        selection = true
+                ) }
+        selQuestions.forEach{println(it)}
 
+        numQuestions = Files.readAllLines(Path.of("${rootDir}/questions-num.csv"))
+                .map { it.split("[;,]") }
+                .filter { it.size == 2 }
+                .map { QuestionEntity(
+                        question = it[0],
+                        answers = listOf(),
+                        trueAnswer = it[1].toInt(),
+                        selection = false
+                ) }
+        numQuestions.forEach{println(it)}
     }
 
     fun getOrCreateUser(sessionId: String): UserEntity {
         return userStorage.computeIfAbsent(sessionId) {
             session -> UserEntity(session)
         }
+    }
+
+    fun registerPlayer(player: UserEntity) {
+        teamScores.putIfAbsent(player.teamId, TeamInfo(player.name, 0, player.teamId))
+        sendMapUpdate()
     }
 
     fun getUser(sessionId: String): UserEntity {
@@ -50,6 +89,9 @@ class GameManagerService {
     fun startGame(): String {
         gameUuid = UUID.randomUUID().toString()
         givenAnswers = mutableMapOf()
+        teamScores = mutableMapOf()
+        numQueue = numQuestions.toMutableList()
+        selQueue = selQuestions.toMutableList()
         placeStates = mapOf(
                 "1_DelELTE"             to PlaceStatus(0, false, false),
                 "2_Tuskecsarnok"        to PlaceStatus(0, false, false),
@@ -91,23 +133,89 @@ class GameManagerService {
         sendMapUpdate()
     }
 
-    fun setSeleczed(place: String, selected: Boolean) {
-        for (placeState in placeStates) {
+    fun setSelected(place: String, selected: Boolean) {
+        for (placeState in placeStates)
             placeState.value.selected = false
-        }
         placeStates[place]!!.selected = selected
 
         sendMapUpdate()
     }
 
+    fun setSelectedTeam(selected: Int) {
+        activeTeam = selected
+    }
+
     fun sendMapUpdate() {
-
-        outgoing.convertAndSend("/status", ScreenStatusPacket(
-                users = mapOf(
-
-                )
-                places = placeStates
+        outgoing.convertAndSend("/topic/status", ScreenStatusPacket(
+                users = teamScores,
+                places = placeStates,
+                activeTeam = if (teamScores.containsKey(activeTeam)) teamScores[activeTeam] else null
         ))
     }
+
+    private fun isSelQuestionAvailable() = selQueue.size >= 2
+
+    private fun isNumQuestionAvailable() = numQueue.size >= 2
+
+    fun sendNewSelQuestion(forTeams: List<Int>) {
+        if (!isSelQuestionAvailable())
+            return
+
+        initNewQuestion()
+        selQueue.removeAt(0)
+        lastQuestion = selQueue[0]
+
+        outgoing.convertAndSend("/topic/question", ScreenQuestionPacket(selQueue[0], visible = true))
+
+        val playerQuestionPacket = PlayerQuestionPacket(
+                selQueue[0].question,
+                selQueue[0].selection,
+                selQueue[0].answers
+        )
+        userStorage.asSequence()
+                .filter { it.value.teamId in forTeams }
+                .forEach { outgoing.convertAndSendToUser(it.value.sessionId, "/topic/question", playerQuestionPacket) }
+
+    }
+
+    fun sendNewNumQuestion(forTeams: List<Int>) {
+        if (!isNumQuestionAvailable())
+            return
+
+        initNewQuestion()
+        numQueue.removeAt(0)
+        lastQuestion = numQueue[0]
+
+        outgoing.convertAndSend("/topic/question", ScreenQuestionPacket(numQueue[0], visible = true))
+
+        val playerQuestionPacket = PlayerQuestionPacket(
+                numQueue[0].question,
+                numQueue[0].selection,
+                numQueue[0].answers
+        )
+        userStorage.asSequence()
+                .filter { it.value.teamId in forTeams }
+                .forEach { outgoing.convertAndSendToUser(it.value.sessionId, "/topic/question", playerQuestionPacket) }
+    }
+
+    fun sendShowAnswer() {
+        hideAll()
+        outgoing.convertAndSend("/topic/answer", ScreenAnswerPacket(lastQuestion, givenAnswers))
+    }
+
+    fun sendHideQuestion() {
+        hideAll()
+        outgoing.convertAndSend("/topic/question", ScreenQuestionPacket(lastQuestion, visible = false))
+    }
+
+    private fun initNewQuestion() {
+        givenAnswers = mutableMapOf()
+    }
+
+    private fun hideAll() {
+        for (user in userStorage)
+            outgoing.convertAndSendToUser(user.value.sessionId, "/topic/hide", PlayerHidePacket())
+    }
+
 
 }

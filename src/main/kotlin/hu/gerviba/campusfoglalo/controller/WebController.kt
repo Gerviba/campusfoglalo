@@ -29,6 +29,9 @@ class WebController {
 
     @GetMapping("/admin/{uuid}")
     fun admin(@PathVariable uuid: String, model: Model): String {
+        if (!game.isUuidValid(uuid))
+            return "redirect:/?invalid-uuid"
+
         model.addAttribute("uuid", uuid)
         model.addAttribute("names", game.placeNames())
         return "admin"

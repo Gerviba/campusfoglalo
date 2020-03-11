@@ -2,7 +2,7 @@
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>WS3 - Websocket Demo</title>
+    <title>Campus Foglaló</title>
     <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:700|Roboto+Mono|Roboto:300&display=swap&subset=latin-ext" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
@@ -17,7 +17,7 @@
                 document.getElementById("login-box").innerHTML = "";
                 document.getElementById("wait").style.display = "block";
 
-                stompClient.subscribe('/topic/question', function (data) {
+                stompClient.subscribe('/user/topic/question', function (data) {
                     let question = JSON.parse(data.body);
 
                     if (question.selection) {
