@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Campus Foglaló</title>
-    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:700|Roboto+Mono|Roboto:300&display=swap&subset=latin-ext" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:700|Roboto+Mono|Roboto:300&display=swap&subset=latin-ext"
+          rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -32,8 +33,9 @@
                         document.getElementById("q-num").style.display = "none";
                         document.getElementById("wait").style.display = "none";
                     } else {
+                        if (document.getElementById("q-num-question").innerText !== question.question)
+                            document.getElementById("q-num-answer").value = "";
                         document.getElementById("q-num-question").innerText = question.question;
-                        document.getElementById("q-num-answer").value = "";
 
                         document.getElementById("q-sel").style.display = "none";
                         document.getElementById("q-num").style.display = "block";
@@ -48,7 +50,24 @@
                     hideAll();
                 });
 
+            }, function (message) {
+                console.error(message);
+                console.log("Reconnecting in 2s");
+                setTimeout(function () {
+                    console.log("Reconnecting");
+                    connect(username, teamId)
+                }, 2000);
             });
+
+            socket.onclose = function () {
+                console.log('closed');
+                stompClient.disconnect();
+                console.log("Reconnecting in 2s");
+                setTimeout(function () {
+                    console.log("Reconnecting");
+                    connect(username, teamId)
+                }, 2000);
+            }
 
         }
 
@@ -84,16 +103,16 @@
 <div class="game">
     <div class="login" id="login-box">
         <form onsubmit="join(); return false">
-            Csapat neve:<br />
-            <input type="text" id="username" maxlength="16" autocomplete="off"><br />
-            Csapat színe:<br />
+            Csapat neve:<br/>
+            <input type="text" id="username" maxlength="16" autocomplete="off"><br/>
+            Csapat színe:<br/>
             <select id="teamId">
                 <option value="1">Zöld</option>
                 <option value="2">Türkiz</option>
                 <option value="3">Magenta</option>
                 <option value="4">Narancssárga</option>
             </select>
-            <input type="submit" value="BELÉPÉS" />
+            <input type="submit" value="BELÉPÉS"/>
         </form>
     </div>
 
@@ -102,7 +121,9 @@
         <p id="q-sel-question">This is the question. It goes like this.</p>
 
         <button id="q-sel-a" onclick="answerQuestion('1')">A: ANSWER 1</button>
-        <button id="q-sel-b" onclick="answerQuestion('2')">B: Ez egy hosszabb válasz lehetőség, még sortörtés is lehet benne akár.</button>
+        <button id="q-sel-b" onclick="answerQuestion('2')">B: Ez egy hosszabb válasz lehetőség, még sortörtés is lehet
+            benne akár.
+        </button>
         <button id="q-sel-c" onclick="answerQuestion('3')">C: ANSWER 3</button>
         <button id="q-sel-d" onclick="answerQuestion('4')">D: ANSWER 4</button>
     </div>

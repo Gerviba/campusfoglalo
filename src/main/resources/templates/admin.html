@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Campus Foglaló</title>
-    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:700|Roboto+Mono|Roboto:300&display=swap&subset=latin-ext" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:700|Roboto+Mono|Roboto:300&display=swap&subset=latin-ext"
+          rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -43,6 +44,17 @@
                     uuid: UUID,
                     place: place,
                     tower: value
+                }),
+            })
+        }
+
+        function sendAttackOrder() {
+            fetch('/api/admin/set-attack-order', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    uuid: UUID,
+                    attackOrder: document.getElementById('attackOrder').value
                 }),
             })
         }
@@ -94,6 +106,27 @@
                 }),
             })
         }
+
+        function resendQuestion(mode) {
+            let teams = [];
+            if (document.getElementById("sel-a").checked)
+                teams.push(1);
+            if (document.getElementById("sel-b").checked)
+                teams.push(2);
+            if (document.getElementById("sel-c").checked)
+                teams.push(3);
+            if (document.getElementById("sel-d").checked)
+                teams.push(4);
+
+            fetch(`/api/admin/resend-question`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    uuid: UUID,
+                    forTeams: teams
+                }),
+            })
+        }
     </script>
 </head>
 <body>
@@ -103,26 +136,39 @@
 
 
     <label>
-        <input type="checkbox" id="sel-a" />A (zöld)
+        <input type="checkbox" id="sel-a"/>A (zöld)
     </label>
     <label>
-        <input type="checkbox" id="sel-b" />B (türkiz)
+        <input type="checkbox" id="sel-b"/>B (türkiz)
     </label>
     <label>
-        <input type="checkbox" id="sel-c" />C (magenta)
+        <input type="checkbox" id="sel-c"/>C (magenta)
     </label>
     <label>
-        <input type="checkbox" id="sel-d" />D (narancs)
+        <input type="checkbox" id="sel-d"/>D (narancs)
     </label>
     <br>
 
-    <button onclick="newQuestion('sel')">Új felelet választós kérdés</button><br>
-    <button onclick="newQuestion('num')">Új szám kitalálós kérdés</button><br>
+    <button onclick="newQuestion('sel')">Új felelet választós kérdés</button>
+    <br>
+    <button onclick="newQuestion('num')">Új szám kitalálós kérdés</button>
+    <br>
+    <button onclick="resendQuestion()">Jelenlegi kérdés újraküldése</button>
+    <br>
 
     <hr>
 
-    <button onclick="showAnswer()">Válasz mutatása</button><br>
-    <button onclick="showMap()">Térkép mutatása</button><br>
+    <button onclick="showAnswer()">Válasz mutatása</button>
+    <br>
+    <button onclick="showMap()">Térkép mutatása</button>
+    <br>
+
+    Támadások<br>
+
+    <input type="text" id="attackOrder" value="ABCD, CBDA, DACB" class="attack-order">
+    <button onclick="sendAttackOrder()">Kiküldés</button>
+
+    <br>
 
     <table>
         <tr>
@@ -139,25 +185,44 @@
         </tr>
         <tr th:each="name : ${names}">
             <td th:text="${name}">I</td>
-            <td><button th:attr="onclick=|activatePlace('${name}', 0)|" class="teamNO">NO</button></td>
-            <td><button th:attr="onclick=|activatePlace('${name}', 1)|" class="teamA">A</button></td>
-            <td><button th:attr="onclick=|activatePlace('${name}', 2)|" class="teamB">B</button></td>
-            <td><button th:attr="onclick=|activatePlace('${name}', 3)|" class="teamC">C</button></td>
-            <td><button th:attr="onclick=|activatePlace('${name}', 4)|" class="teamD">D</button></td>
-            <td><button th:attr="onclick=|selectPlace('${name}', 'true')|">S</button></td>
-            <td><button th:attr="onclick=|selectPlace('${name}', 'false')|">!S</button></td>
-            <td><button th:attr="onclick=|towerPlace('${name}', 'true')|">T</button></td>
-            <td><button th:attr="onclick=|towerPlace('${name}', 'false')|">!T</button></td>
+            <td>
+                <button th:attr="onclick=|activatePlace('${name}', 0)|" class="teamNO">NO</button>
+            </td>
+            <td>
+                <button th:attr="onclick=|activatePlace('${name}', 1)|" class="teamA">A</button>
+            </td>
+            <td>
+                <button th:attr="onclick=|activatePlace('${name}', 2)|" class="teamB">B</button>
+            </td>
+            <td>
+                <button th:attr="onclick=|activatePlace('${name}', 3)|" class="teamC">C</button>
+            </td>
+            <td>
+                <button th:attr="onclick=|activatePlace('${name}', 4)|" class="teamD">D</button>
+            </td>
+            <td>
+                <button th:attr="onclick=|selectPlace('${name}', 'true')|">S</button>
+            </td>
+            <td>
+                <button th:attr="onclick=|selectPlace('${name}', 'false')|">!S</button>
+            </td>
+            <td>
+                <button th:attr="onclick=|towerPlace('${name}', 'true')|">T</button>
+            </td>
+            <td>
+                <button th:attr="onclick=|towerPlace('${name}', 'false')|">!T</button>
+            </td>
         </tr>
     </table>
     <br>
-    Következő csapat<br>
+<!--    Következő csapat<br>-->
 
-    <button onclick="nextTeam('0')" class="teamNO">NO</button>
-    <button onclick="nextTeam('1')" class="teamA">A</button>
-    <button onclick="nextTeam('2')" class="teamB">B</button>
-    <button onclick="nextTeam('3')" class="teamC">C</button>
-    <button onclick="nextTeam('4')" class="teamD">D</button>
+<!--    <button onclick="nextTeam('0')" class="teamNO">NO</button>-->
+<!--    <button onclick="nextTeam('1')" class="teamA">A</button>-->
+<!--    <button onclick="nextTeam('2')" class="teamB">B</button>-->
+<!--    <button onclick="nextTeam('3')" class="teamC">C</button>-->
+<!--    <button onclick="nextTeam('4')" class="teamD">D</button>-->
+
 </div>
 </body>
 </html>

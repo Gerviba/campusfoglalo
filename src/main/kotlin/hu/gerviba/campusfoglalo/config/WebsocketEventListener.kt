@@ -69,7 +69,7 @@ class WebsocketEventListener {
         val simpConnectMessage = headerAccessor.messageHeaders["simpConnectMessage"] as GenericMessage<Object>?
         checkNotNull(simpConnectMessage)
         val nativeHeaders = simpConnectMessage.headers["nativeHeaders"] as Map<String, List<String>>?
-        checkNotNull( nativeHeaders)
+        checkNotNull(nativeHeaders)
         return nativeHeaders
     }
 

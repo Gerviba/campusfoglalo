@@ -1,7 +1,7 @@
 package hu.gerviba.campusfoglalo.model
 
-data class UserEntity (
-    val sessionId: String
+data class UserEntity(
+        val sessionId: String
 ) {
 
     var name: String = ""

@@ -21,18 +21,4 @@ class WebsocketController {
         game.answerQuestion(user, answer.answer)
     }
 
-//    @MessageMapping("/move")
-//    fun moveRequest(moveRequest: MoveRequest, @Header("simpSessionId") sessionId: String) {
-//        val user = game.getUser(sessionId)
-//        user.dX = moveRequest.dX
-//        user.dY = moveRequest.dY
-//    }
-//
-//    @MessageMapping("/reload-map")
-//    @SendToUser("/topic/map")
-//    fun reloadMap(reloadMapRequest: ReloadMapRequest, @Header("simpSessionId") sessionId: String): MapEntity {
-//        val user = game.getUser(sessionId)
-//        return users.getMapOrDefault(user.place)
-//    }
-
 }

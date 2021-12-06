@@ -4,12 +4,13 @@ import hu.gerviba.campusfoglalo.service.GameManagerService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.*
 
-data class NewQuestionDto (var uuid: String, var forTeams: List<Int>)
-data class SetOwnerDto (var uuid: String, var place: String, var owner: Int)
-data class SetSelectedDto (var uuid: String, var place: String, var selected: String)
-data class SetTowerDto (var uuid: String, var place: String, var tower: String)
-data class SetTeamSelectedDto (var uuid: String, var selected: Int)
-data class OnlyUuidDto (var uuid: String)
+data class NewQuestionDto(var uuid: String, var forTeams: List<Int>)
+data class SetOwnerDto(var uuid: String, var place: String, var owner: Int)
+data class SetSelectedDto(var uuid: String, var place: String, var selected: String)
+data class SetTowerDto(var uuid: String, var place: String, var tower: String)
+data class SetTeamSelectedDto(var uuid: String, var selected: Int)
+data class SetAttackOrder(var uuid: String, var attackOrder: String)
+data class OnlyUuidDto(var uuid: String)
 
 @RequestMapping("/api/admin")
 @RestController
@@ -19,7 +20,7 @@ class AdminApiController {
     private lateinit var game: GameManagerService
 
     @PostMapping("/new-sel-question")
-    fun newSelQuestion(@RequestBody data: NewQuestionDto): Boolean  {
+    fun newSelQuestion(@RequestBody data: NewQuestionDto): Boolean {
         if (!game.isUuidValid(data.uuid))
             return false
 
@@ -28,11 +29,20 @@ class AdminApiController {
     }
 
     @PostMapping("/new-num-question")
-    fun newNumQuestion(@RequestBody data: NewQuestionDto): Boolean  {
+    fun newNumQuestion(@RequestBody data: NewQuestionDto): Boolean {
         if (!game.isUuidValid(data.uuid))
             return false
 
         game.sendNewNumQuestion(data.forTeams)
+        return true
+    }
+
+    @PostMapping("/resend-question")
+    fun resendQuestion(@RequestBody data: NewQuestionDto): Boolean {
+        if (!game.isUuidValid(data.uuid))
+            return false
+
+        game.resendQuestion(data.forTeams)
         return true
     }
 
@@ -63,6 +73,15 @@ class AdminApiController {
         return true
     }
 
+    @PostMapping("/set-attack-order")
+    fun setAttackOrder(@RequestBody data: SetAttackOrder): Boolean {
+        if (!game.isUuidValid(data.uuid))
+            return false
+
+        game.setAttackOrder(data.attackOrder)
+        return true
+    }
+
     @PostMapping("/set-team-selected")
     fun setSelectedTeam(@RequestBody data: SetTeamSelectedDto): Boolean {
         if (!game.isUuidValid(data.uuid))
@@ -74,7 +93,7 @@ class AdminApiController {
     }
 
     @PostMapping("/show-answer")
-    fun showAnswer(@RequestBody data: OnlyUuidDto): Boolean  {
+    fun showAnswer(@RequestBody data: OnlyUuidDto): Boolean {
         if (!game.isUuidValid(data.uuid))
             return false
 
@@ -83,7 +102,7 @@ class AdminApiController {
     }
 
     @PostMapping("/show-map")
-    fun showMap(@RequestBody data: OnlyUuidDto): Boolean  {
+    fun showMap(@RequestBody data: OnlyUuidDto): Boolean {
         if (!game.isUuidValid(data.uuid))
             return false
 

@@ -35,6 +35,7 @@ class GameManagerService {
     var lastQuestion: QuestionEntity = QuestionEntity("", listOf(), 0, false)
 
     var gameUuid: String = ""
+    var order: String = ""
     var placeStates: Map<String, PlaceStatus> = mapOf()
     var activeTeam: Int = 0
     var givenAnswers: MutableMap<Int, Int> = mutableMapOf()
@@ -47,27 +48,31 @@ class GameManagerService {
         selQuestions = Files.readAllLines(Path.of("${rootDir}/questions-sel.csv"), StandardCharsets.UTF_8)
                 .map { it.split(";") }
                 .filter { it.size == 6 }
-                .map { QuestionEntity(
-                        question = it[0],
-                        answers = listOf(it[1], it[2], it[3], it[4]),
-                        trueAnswer = it[5].toInt(),
-                        selection = true
-                ) }
+                .map {
+                    QuestionEntity(
+                            question = it[0],
+                            answers = listOf(it[1], it[2], it[3], it[4]),
+                            trueAnswer = it[5].toInt(),
+                            selection = true
+                    )
+                }
 
         numQuestions = Files.readAllLines(Path.of("${rootDir}/questions-num.csv"), StandardCharsets.UTF_8)
                 .map { it.split(";") }
                 .filter { it.size == 2 }
-                .map { QuestionEntity(
-                        question = it[0],
-                        answers = listOf(),
-                        trueAnswer = it[1].toInt(),
-                        selection = false
-                ) }
+                .map {
+                    QuestionEntity(
+                            question = it[0],
+                            answers = listOf(),
+                            trueAnswer = it[1].toInt(),
+                            selection = false
+                    )
+                }
     }
 
     fun getOrCreateUser(sessionId: String): UserEntity {
-        return userStorage.computeIfAbsent(sessionId) {
-            session -> UserEntity(session)
+        return userStorage.computeIfAbsent(sessionId) { session ->
+            UserEntity(session)
         }
     }
 
@@ -94,32 +99,33 @@ class GameManagerService {
         numQueue = numQuestions.toMutableList()
         selQueue = selQuestions.toMutableList()
         placeStates = mapOf(
-                "1_DelELTE"             to PlaceStatus(0, false, false),
-                "2_Tuskecsarnok"        to PlaceStatus(0, false, false),
-                "3_IQ"                  to PlaceStatus(0, false, false),
-                "4_EszakELTE"           to PlaceStatus(0, false, false),
-                "5_Goldmann"            to PlaceStatus(0, false, false),
-                "6_Karman"              to PlaceStatus(0, false, false),
-                "7_E"                   to PlaceStatus(0, false, false),
-                "8_R"                   to PlaceStatus(0, false, false),
-                "9_K"                   to PlaceStatus(0, false, false),
-                "10_CHMAX"              to PlaceStatus(0, false, false),
-                "11_Gellert"            to PlaceStatus(0, false, false),
-                "12_Moricz"             to PlaceStatus(0, false, false),
-                "13_Gardonyi"           to PlaceStatus(0, false, false),
-                "14_Sarki"              to PlaceStatus(0, false, false),
-                "15_Allee"              to PlaceStatus(0, false, false),
-                "16_MOL"                to PlaceStatus(0, false, false),
-                "17_Schonherz"          to PlaceStatus(0, false, false),
-                "18_Pinyo"              to PlaceStatus(0, false, false),
-                "19_Boraros"            to PlaceStatus(0, false, false),
-                "20_Corvinus"           to PlaceStatus(0, false, false))
+                "1_DelELTE" to PlaceStatus(0, false, false),
+                "2_Tuskecsarnok" to PlaceStatus(0, false, false),
+                "3_IQ" to PlaceStatus(0, false, false),
+                "4_EszakELTE" to PlaceStatus(0, false, false),
+                "5_Goldmann" to PlaceStatus(0, false, false),
+                "6_Karman" to PlaceStatus(0, false, false),
+                "7_E" to PlaceStatus(0, false, false),
+                "8_R" to PlaceStatus(0, false, false),
+                "9_K" to PlaceStatus(0, false, false),
+                "10_CHMAX" to PlaceStatus(0, false, false),
+                "11_Gellert" to PlaceStatus(0, false, false),
+                "12_Moricz" to PlaceStatus(0, false, false),
+                "13_Gardonyi" to PlaceStatus(0, false, false),
+                "14_Sarki" to PlaceStatus(0, false, false),
+                "15_Allee" to PlaceStatus(0, false, false),
+                "16_MOL" to PlaceStatus(0, false, false),
+                "17_Schonherz" to PlaceStatus(0, false, false),
+                "18_Pinyo" to PlaceStatus(0, false, false),
+                "19_Boraros" to PlaceStatus(0, false, false),
+                "20_Corvinus" to PlaceStatus(0, false, false))
 
         return gameUuid
     }
 
     fun answerQuestion(user: UserEntity, answer: Int) {
         givenAnswers[user.teamId] = answer
+        sendQuestionForScreen()
     }
 
     fun placeNames() = placeStates.keys
@@ -142,6 +148,11 @@ class GameManagerService {
         sendMapUpdate()
     }
 
+    fun setAttackOrder(attackOrder: String) {
+        order = attackOrder
+        sendMapUpdate()
+    }
+
     fun setSelectedTeam(selected: Int) {
         activeTeam = selected
     }
@@ -155,7 +166,8 @@ class GameManagerService {
         outgoing.convertAndSend("/topic/status", ScreenStatusPacket(
                 users = teamScores,
                 places = placeStates,
-                activeTeam = if (teamScores.containsKey(activeTeam)) teamScores[activeTeam] else null
+                activeTeam = if (teamScores.containsKey(activeTeam)) teamScores[activeTeam] else null,
+                attackOrder = order
         ))
     }
 
@@ -171,7 +183,7 @@ class GameManagerService {
         selQueue.removeAt(0)
         lastQuestion = selQueue[0]
 
-        outgoing.convertAndSend("/topic/question", ScreenQuestionPacket(selQueue[0], visible = true))
+        outgoing.convertAndSend("/topic/question", ScreenQuestionPacket(selQueue[0], visible = true, alreadyAnswered = ""))
 
         val playerQuestionPacket = PlayerQuestionPacket(
                 selQueue[0].question,
@@ -182,7 +194,7 @@ class GameManagerService {
                 .filter { it.value.teamId in forTeams }
                 .forEach {
                     val headerAccessor = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE)
-                    with (headerAccessor) {
+                    with(headerAccessor) {
                         sessionId = it.value.sessionId
                         setLeaveMutable(true)
                     }
@@ -199,7 +211,7 @@ class GameManagerService {
         numQueue.removeAt(0)
         lastQuestion = numQueue[0]
 
-        outgoing.convertAndSend("/topic/question", ScreenQuestionPacket(numQueue[0], visible = true))
+        outgoing.convertAndSend("/topic/question", ScreenQuestionPacket(numQueue[0], visible = true, alreadyAnswered = ""))
 
         val playerQuestionPacket = PlayerQuestionPacket(
                 numQueue[0].question,
@@ -210,7 +222,7 @@ class GameManagerService {
                 .filter { it.value.teamId in forTeams }
                 .forEach {
                     val headerAccessor = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE)
-                    with (headerAccessor) {
+                    with(headerAccessor) {
                         sessionId = it.value.sessionId
                         setLeaveMutable(true)
                     }
@@ -220,12 +232,12 @@ class GameManagerService {
 
     fun sendShowAnswer() {
         hideAll()
-        outgoing.convertAndSend("/topic/answer", ScreenAnswerPacket(lastQuestion, givenAnswers))
+        outgoing.convertAndSend("/topic/answer", ScreenAnswerPacket(lastQuestion, givenAnswers, alreadyAnswered = fetchWhoAnswered()))
     }
 
     fun sendHideQuestion() {
         hideAll()
-        outgoing.convertAndSend("/topic/question", ScreenQuestionPacket(lastQuestion, visible = false))
+        outgoing.convertAndSend("/topic/question", ScreenQuestionPacket(lastQuestion, visible = false, alreadyAnswered = ""))
     }
 
     private fun initNewQuestion() {
@@ -235,12 +247,43 @@ class GameManagerService {
     private fun hideAll() {
         for (user in userStorage) {
             val headerAccessor = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE)
-            with (headerAccessor) {
+            with(headerAccessor) {
                 sessionId = user.value.sessionId
                 setLeaveMutable(true)
             }
             outgoing.convertAndSendToUser(user.value.sessionId, "/topic/hide", PlayerHidePacket(), headerAccessor.messageHeaders)
         }
+    }
+
+    fun resendQuestion(forTeams: List<Int>) {
+        sendQuestionForScreen()
+
+        val playerQuestionPacket = PlayerQuestionPacket(
+                numQueue[0].question,
+                numQueue[0].selection,
+                numQueue[0].answers
+        )
+        userStorage.asSequence()
+                .filter { it.value.teamId in forTeams }
+                .forEach {
+                    val headerAccessor = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE)
+                    with(headerAccessor) {
+                        sessionId = it.value.sessionId
+                        setLeaveMutable(true)
+                    }
+                    outgoing.convertAndSendToUser(it.value.sessionId, "/topic/question", playerQuestionPacket, headerAccessor.messageHeaders)
+                }
+    }
+
+    private fun sendQuestionForScreen() {
+        outgoing.convertAndSend(
+            "/topic/question",
+            ScreenQuestionPacket(lastQuestion, visible = true, alreadyAnswered = fetchWhoAnswered())
+        )
+    }
+
+    private fun fetchWhoAnswered(): String {
+        return givenAnswers.keys.map { teamScores[it]?.name ?: "n/a" }.joinToString()
     }
 
 
