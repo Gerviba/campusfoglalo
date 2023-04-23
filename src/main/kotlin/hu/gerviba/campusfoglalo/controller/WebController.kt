@@ -34,6 +34,14 @@ class WebController {
 
         model.addAttribute("uuid", uuid)
         model.addAttribute("names", game.placeNames())
+        model.addAttribute("teamA", game.teamA())
+        model.addAttribute("teamB", game.teamB())
+        model.addAttribute("teamC", game.teamC())
+        model.addAttribute("teamD", game.teamD())
+        model.addAttribute("selSum", game.sumOfSel())
+        model.addAttribute("numSum", game.sumOfNum())
+        model.addAttribute("selActual", game.actualOfSel())
+        model.addAttribute("numActual", game.actualOfNum())
         return "admin"
     }
 

@@ -20,29 +20,38 @@ class AdminApiController {
     private lateinit var game: GameManagerService
 
     @PostMapping("/new-sel-question")
-    fun newSelQuestion(@RequestBody data: NewQuestionDto): Boolean {
+    fun newSelQuestion(@RequestBody data: NewQuestionDto): String {
         if (!game.isUuidValid(data.uuid))
-            return false
+            return "invalid"
 
         game.sendNewSelQuestion(data.forTeams)
-        return true
+        return "${game.actualOfSel()}/${game.sumOfSel()}"
     }
 
     @PostMapping("/new-num-question")
-    fun newNumQuestion(@RequestBody data: NewQuestionDto): Boolean {
+    fun newNumQuestion(@RequestBody data: NewQuestionDto): String {
+        if (!game.isUuidValid(data.uuid))
+            return "invalid"
+
+        game.sendNewNumQuestion(data.forTeams)
+        return "${game.actualOfNum()}/${game.sumOfNum()}"
+    }
+
+    @PostMapping("/resend-num-question")
+    fun resendNumQuestion(@RequestBody data: NewQuestionDto): Boolean {
         if (!game.isUuidValid(data.uuid))
             return false
 
-        game.sendNewNumQuestion(data.forTeams)
+        game.resendNumQuestion(data.forTeams)
         return true
     }
 
-    @PostMapping("/resend-question")
-    fun resendQuestion(@RequestBody data: NewQuestionDto): Boolean {
+    @PostMapping("/resend-sel-question")
+    fun resendSelQuestion(@RequestBody data: NewQuestionDto): Boolean {
         if (!game.isUuidValid(data.uuid))
             return false
 
-        game.resendQuestion(data.forTeams)
+        game.resendSelQuestion(data.forTeams)
         return true
     }
 

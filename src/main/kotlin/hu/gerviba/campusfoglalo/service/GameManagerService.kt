@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.PostConstruct
@@ -45,7 +46,7 @@ class GameManagerService {
 
     @PostConstruct
     fun init() {
-        selQuestions = Files.readAllLines(Path.of("${rootDir}/questions-sel.csv"), StandardCharsets.UTF_8)
+        selQuestions = Files.readAllLines(Paths.get("${rootDir}/questions-sel.csv"), StandardCharsets.UTF_8)
                 .map { it.split(";") }
                 .filter { it.size == 6 }
                 .map {
@@ -57,7 +58,7 @@ class GameManagerService {
                     )
                 }
 
-        numQuestions = Files.readAllLines(Path.of("${rootDir}/questions-num.csv"), StandardCharsets.UTF_8)
+        numQuestions = Files.readAllLines(Paths.get("${rootDir}/questions-num.csv"), StandardCharsets.UTF_8)
                 .map { it.split(";") }
                 .filter { it.size == 2 }
                 .map {
@@ -129,6 +130,22 @@ class GameManagerService {
     }
 
     fun placeNames() = placeStates.keys
+
+    fun teamA() = teamScores[1]?.name ?: "A"
+
+    fun teamB() = teamScores[2]?.name ?: "B"
+
+    fun teamC() = teamScores[3]?.name ?: "C"
+
+    fun teamD() = teamScores[4]?.name ?: "D"
+
+    fun sumOfSel() = selQuestions.size
+
+    fun actualOfSel() = sumOfSel() - selQueue.size
+
+    fun sumOfNum() = numQuestions.size
+
+    fun actualOfNum() = sumOfNum() - numQueue.size
 
     fun setOwner(place: String, owner: Int) {
         placeStates[place]!!.owner = owner
@@ -255,7 +272,7 @@ class GameManagerService {
         }
     }
 
-    fun resendQuestion(forTeams: List<Int>) {
+    fun resendNumQuestion(forTeams: List<Int>) {
         sendQuestionForScreen()
 
         val playerQuestionPacket = PlayerQuestionPacket(
@@ -273,6 +290,26 @@ class GameManagerService {
                     }
                     outgoing.convertAndSendToUser(it.value.sessionId, "/topic/question", playerQuestionPacket, headerAccessor.messageHeaders)
                 }
+    }
+
+    fun resendSelQuestion(forTeams: List<Int>) {
+        sendQuestionForScreen()
+
+        val playerQuestionPacket = PlayerQuestionPacket(
+            selQueue[0].question,
+            selQueue[0].selection,
+            selQueue[0].answers
+        )
+        userStorage.asSequence()
+            .filter { it.value.teamId in forTeams }
+            .forEach {
+                val headerAccessor = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE)
+                with(headerAccessor) {
+                    sessionId = it.value.sessionId
+                    setLeaveMutable(true)
+                }
+                outgoing.convertAndSendToUser(it.value.sessionId, "/topic/question", playerQuestionPacket, headerAccessor.messageHeaders)
+            }
     }
 
     private fun sendQuestionForScreen() {
